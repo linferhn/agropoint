@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+
+  # ── Base de Datos MySQL ──────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: agropoint_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: agropoint
+      MYSQL_USER: agropoint
+      MYSQL_PASSWORD: agropoint123
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "agropoint", "-pagropoint123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Aplicación Flask ─────────────────────────────────────────────
+  app:
+    build: .
+    container_name: agropoint_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: agropoint
+      DB_PASSWORD: agropoint123
+      DB_NAME: agropoint
+      PORT: 5000
+      FLASK_DEBUG: "false"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./static:/app/static
+
+volumes:
+  mysql_data:
